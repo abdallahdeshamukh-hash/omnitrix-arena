@@ -514,7 +514,7 @@ function confirmSelect(){
   shake(4,.2); sfx.transform();
 }
 function omnitrixSymbol(hw, hh){
-  // classic Omnitrix face — black dial, colored hourglass, glowing waist core
+  // classic Omnitrix face — black dial, colored hourglass
   const col = ctx.fillStyle;
   ctx.fillStyle = '#0c1a08';
   ctx.beginPath(); ctx.arc(0,0,hh*1.24,0,TAU); ctx.fill();
@@ -529,10 +529,6 @@ function omnitrixSymbol(hw, hh){
   ctx.bezierCurveTo(hw*0.58,hh*0.62, hw*0.18,hh*0.10, 0,0);
   ctx.bezierCurveTo(-hw*0.18,hh*0.10, -hw*0.58,hh*0.62, -hw,hh);
   ctx.closePath(); ctx.fill();
-  const sg = ctx.createRadialGradient(0,0,0, 0,0,Math.max(2,hw*0.20));
-  sg.addColorStop(0,'#ffffff'); sg.addColorStop(0.55,col); sg.addColorStop(1,col);
-  ctx.fillStyle = sg;
-  ctx.beginPath(); ctx.arc(0,0,Math.max(2,hw*0.20),0,TAU); ctx.fill();
   ctx.fillStyle = col;
 }
 function drawSelect(){
