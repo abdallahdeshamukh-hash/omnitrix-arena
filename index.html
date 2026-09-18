@@ -218,6 +218,7 @@ function spawnEnemy(type){
       fireCd: 2.2, slamCd: 3.5, burstCd: 5.5, summonCd: 9,
       slamT: 0, burstT: 0, burstN: 0, enraged: false };
     boss.hp = boss.maxHp;
+    enemies.push(boss);   // he must live in the enemies list — update/draw/bullet loops all iterate it
     shake(14,.7);
     return;
   }
@@ -333,8 +334,10 @@ let wheelAcc = 0;
 cv.addEventListener('wheel', e=>{
   e.preventDefault();
   if(state!==ST.PLAY) return;
-  wheelAcc += (Math.abs(e.deltaX)>Math.abs(e.deltaY)? e.deltaX : e.deltaY);
-  const step = 50;
+  let d = (Math.abs(e.deltaX)>Math.abs(e.deltaY)? e.deltaX : e.deltaY);
+  if(e.deltaMode===1) d *= 33;   // Firefox sends LINES (~3), not pixels
+  wheelAcc += d;
+  const step = 99;   // ≈ one physical wheel notch (100px in Chrome, 3 lines×33 in Firefox) → exactly ONE alien (old 50 made ticks jump 2 slots, locking out 3 aliens)
   let guard = 0;
   while(Math.abs(wheelAcc) >= step && guard++ < 12){
     const d = wheelAcc>0?1:-1;
@@ -465,6 +468,7 @@ function godArrival(){
     kills++; score += bt.score;
     burst(boss.x,boss.y,bt.color,30,420); burst(boss.x,boss.y,'#ffffff',20,520);
     floater(boss.x,boss.y-80,'+'+bt.score,'#ffd23f');
+    const bi = enemies.indexOf(boss); if(bi>=0) enemies.splice(bi,1);   // he lives in enemies now — remove before the generic loop
     boss = null;
   }
   for(const e of enemies.slice()){
@@ -965,7 +969,7 @@ function update(dt){
 
 function damageEnemy(e, dmg, kx, ky){
   e.hp -= dmg; e.hitT = 0.12;
-  if(kx||ky){ const kl = Math.hypot(kx,ky)||1; const push = e.type==='WARBOT'?40:140;
+  if(kx||ky){ const kl = Math.hypot(kx,ky)||1; const push = e.type==='VILGAX'?24:e.type==='WARBOT'?40:140;
     e.x = clamp(e.x + kx/kl*(push/Math.max(1,Math.hypot(kx,ky)/200)), e.r, world.w-e.r);
     e.y = clamp(e.y + ky/kl*(push/Math.max(1,Math.hypot(kx,ky)/200)), e.r, world.h-e.r);
   }
@@ -1753,6 +1757,7 @@ window.__omni = {
   killBoss(){ if(boss) damageEnemy(boss, 1e9, 0, 1); },
   testBoss(){ enemies.length=0; spawnQueue.length=0; boss=null; wave=4; betweenWaves=true; waveTimer=0; for(let i=0;i<40 && !boss;i++) update(1/60); },
   get selectOpen(){ return selectUI.open; },
+  get selectIdx(){ return selectUI.idx; },
   get diff(){ return diffKey; },
   get paused(){ return paused; },
   get enemies(){ return enemies; },
