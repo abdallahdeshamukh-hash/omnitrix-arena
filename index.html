@@ -513,6 +513,28 @@ function confirmSelect(){
   floater(player.x, player.y-34, ALIENS[player.alien].name+'!', ALIENS[player.alien].color2);
   shake(4,.2); sfx.transform();
 }
+function omnitrixSymbol(hw, hh){
+  // classic Omnitrix face — black dial, colored hourglass, glowing waist core
+  const col = ctx.fillStyle;
+  ctx.fillStyle = '#0c1a08';
+  ctx.beginPath(); ctx.arc(0,0,hh*1.24,0,TAU); ctx.fill();
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(-hw,-hh);
+  ctx.quadraticCurveTo(0,-hh*1.06, hw,-hh);
+  ctx.bezierCurveTo(hw*0.58,-hh*0.62, hw*0.18,-hh*0.10, 0,0);
+  ctx.bezierCurveTo(-hw*0.18,-hh*0.10, -hw*0.58,-hh*0.62, -hw,-hh);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-hw,hh);
+  ctx.quadraticCurveTo(0,hh*1.06, hw,hh);
+  ctx.bezierCurveTo(hw*0.58,hh*0.62, hw*0.18,hh*0.10, 0,0);
+  ctx.bezierCurveTo(-hw*0.18,hh*0.10, -hw*0.58,hh*0.62, -hw,hh);
+  ctx.closePath(); ctx.fill();
+  const sg = ctx.createRadialGradient(0,0,0, 0,0,Math.max(2,hw*0.20));
+  sg.addColorStop(0,'#ffffff'); sg.addColorStop(0.55,col); sg.addColorStop(1,col);
+  ctx.fillStyle = sg;
+  ctx.beginPath(); ctx.arc(0,0,Math.max(2,hw*0.20),0,TAU); ctx.fill();
+  ctx.fillStyle = col;
+}
 function drawSelect(){
   const t = Math.min(1, selectUI.t*4);
   ctx.fillStyle = 'rgba(4,6,12,'+(t*0.86)+')';
@@ -526,8 +548,7 @@ function drawSelect(){
   ctx.lineWidth = 6; ctx.strokeStyle = cur.color; ctx.shadowColor = cur.color; ctx.shadowBlur = 26; ctx.stroke();
   ctx.shadowBlur = 0;
   ctx.fillStyle = cur.color;
-  ctx.beginPath(); ctx.moveTo(-34,-40); ctx.lineTo(34,-40); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-34,40); ctx.lineTo(34,40); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+  omnitrixSymbol(44, 62);
   ctx.restore();
   const n = 6, gap = Math.min(130, W/6);
   for(let i=0;i<n;i++){
@@ -1593,11 +1614,8 @@ function drawHUD(){
     const cur = low ? '#ff5252' : (p.transformed ? ALIENS[p.alien].color : '#7dfa4c');
     ctx.fillStyle = cur; ctx.shadowColor=cur; ctx.shadowBlur=16+dialGlow*20; ctx.fill();
     ctx.shadowBlur=0;
-    ctx.fillStyle='#0c1a08';
-    ctx.beginPath(); ctx.moveTo(-br*0.45,-br*0.5); ctx.lineTo(br*0.45,-br*0.5);
-    ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-br*0.45,br*0.5); ctx.lineTo(br*0.45,br*0.5);
-    ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#7dfa4c';
+    omnitrixSymbol(br*0.515, br*0.72);
     ctx.restore();
     ctx.fillStyle='#8fa0c0'; ctx.font='11px Segoe UI'; ctx.textAlign='center';
     ctx.fillText('Scroll/Q: dial • Click: transform • E: '+(p.transformed?'revert':'transform'), bx, by+56);
@@ -1623,9 +1641,8 @@ function drawMenu(){
   ctx.beginPath(); ctx.arc(0,0,74,0,TAU);
   ctx.fillStyle='#7dfa4c'; ctx.shadowColor='#7dfa4c'; ctx.shadowBlur=40; ctx.fill();
   ctx.shadowBlur=0;
-  ctx.fillStyle='#0c1a08';
-  ctx.beginPath(); ctx.moveTo(-40,-46); ctx.lineTo(40,-46); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-40,46); ctx.lineTo(40,46); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#7dfa4c';
+  omnitrixSymbol(37, 53);
   ctx.restore();
 
   ctx.fillStyle='#7dfa4c'; ctx.shadowColor='#7dfa4c'; ctx.shadowBlur=24;
