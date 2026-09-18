@@ -319,8 +319,8 @@ window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 let mouse = {x:W/2, y:H/2, down:false};
 cv.addEventListener('mousemove', e=>{
   mouse.x=e.clientX; mouse.y=e.clientY;
-  if(state===ST.MENU && mouse.down && menuSlider && e.clientY>=menuSlider.y-16 && e.clientY<=menuSlider.y+30){
-    volume = clamp((e.clientX-menuSlider.x)/menuSlider.w, 0, 1);
+  if(state===ST.MENU && mouse.down && menuSlider && e.clientX>=menuSlider.x-14 && e.clientX<=menuSlider.x+menuSlider.w+14 && e.clientY>=menuSlider.y-16 && e.clientY<=menuSlider.y+menuSlider.h+16){
+    volume = clamp(1-(e.clientY-menuSlider.y)/menuSlider.h, 0, 1);
     try{ localStorage.setItem('omnitrix_vol', String(volume)); }catch(err){}
   }
 });
@@ -351,8 +351,8 @@ cv.addEventListener('click', e=>{
     for(const b of menuBtns){
       if(x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){ setDifficulty(b.key); return; }
     }
-    if(menuSlider && y>=menuSlider.y-16 && y<=menuSlider.y+30 && x>=menuSlider.x-10 && x<=menuSlider.x+menuSlider.w+10){
-      volume = clamp((x-menuSlider.x)/menuSlider.w, 0, 1);
+    if(menuSlider && y>=menuSlider.y-16 && y<=menuSlider.y+menuSlider.h+16 && x>=menuSlider.x-10 && x<=menuSlider.x+menuSlider.w+10){
+      volume = clamp(1-(y-menuSlider.y)/menuSlider.h, 0, 1);
       try{ localStorage.setItem('omnitrix_vol', String(volume)); }catch(err){}
       audioInit(); tone(700,.08,'sine',.05,900);
     }
@@ -376,8 +376,8 @@ cv.addEventListener('touchstart', e=>{
         for(const b of menuBtns){
           if(pt.x>=b.x && pt.x<=b.x+b.w && pt.y>=b.y && pt.y<=b.y+b.h){ setDifficulty(b.key); hitBtn = true; }
         }
-        if(!hitBtn && menuSlider && pt.y>=menuSlider.y-18 && pt.y<=menuSlider.y+32 && pt.x>=menuSlider.x-12 && pt.x<=menuSlider.x+menuSlider.w+12){
-          volume = clamp((pt.x-menuSlider.x)/menuSlider.w, 0, 1);
+        if(!hitBtn && menuSlider && pt.y>=menuSlider.y-18 && pt.y<=menuSlider.y+menuSlider.h+18 && pt.x>=menuSlider.x-12 && pt.x<=menuSlider.x+menuSlider.w+12){
+          volume = clamp(1-(pt.y-menuSlider.y)/menuSlider.h, 0, 1);
           try{ localStorage.setItem('omnitrix_vol', String(volume)); }catch(err){}
           audioInit(); tone(700,.08,'sine',.05,900);
           hitBtn = true;
@@ -1686,18 +1686,18 @@ function drawMenu(){
     ctx.font = '10px Segoe UI';
     ctx.fillText(key==='easy' ? 'chill vibes' : key==='medium' ? 'balanced' : 'drone storm', b.x+b.w/2, b.y+32);
   }
-  // sfx volume slider
-  const sw = Math.min(240, W-140), sy = by+bh+30;
-  menuSlider = { x: W/2-sw/2, y: sy, w: sw, h: 8 };
-  ctx.fillStyle='#8fa0c0'; ctx.font='bold 12px Segoe UI'; ctx.textAlign='center';
-  ctx.fillText('SFX VOLUME', W/2, sy-8);
-  ctx.fillStyle='#1a2440'; ctx.fillRect(menuSlider.x, sy, sw, 8);
-  ctx.fillStyle='#7dfa4c'; ctx.fillRect(menuSlider.x, sy, sw*volume, 8);
-  ctx.beginPath(); ctx.arc(menuSlider.x+sw*volume, sy+4, 9, 0, TAU);
+  // sfx volume — vertical slider, tucked on the right edge
+  const th = 132, tx = W-46, ty = H*0.28;
+  menuSlider = { x: tx-14, y: ty, w: 28, h: th };
+  ctx.fillStyle='#8fa0c0'; ctx.font='bold 11px Segoe UI'; ctx.textAlign='center';
+  ctx.fillText('SFX', tx, ty-10);
+  ctx.fillStyle='#1a2440'; ctx.fillRect(tx-3, ty, 6, th);
+  ctx.fillStyle='#7dfa4c'; ctx.fillRect(tx-3, ty+th*(1-volume), 6, th*volume);
+  ctx.beginPath(); ctx.arc(tx, ty+th*(1-volume), 8, 0, TAU);
   ctx.fillStyle='#eaffe0'; ctx.fill();
   ctx.strokeStyle='#7dfa4c'; ctx.lineWidth=2; ctx.stroke();
   ctx.fillStyle='#56637f'; ctx.font='10px Segoe UI';
-  ctx.fillText(Math.round(volume*100)+'%   •   M mute', W/2, sy+24);
+  ctx.fillText(Math.round(volume*100)+'%', tx, ty+th+16);
   if(Math.floor(time*1.6)%2===0){
     ctx.fillStyle='#eaffe0'; ctx.font='bold 22px Segoe UI';
     ctx.fillText(IS_TOUCH?'TAP TO START':'PRESS SPACE TO START', W/2, H*0.80);
