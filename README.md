@@ -8,6 +8,7 @@ Play it by opening `index.html` in any browser. No dependencies, no install — 
 
 - Transform into aliens to fight; every alien drains the Omnitrix energy bar, and hitting zero forces you back into **Ben** until it recharges.
 - Counter-pick: Heatblast for range, Four Arms for crowds, XLR8 to blitz, Diamondhead to tank, Ghostfreak to phase, Grey Matter to poke.
+- **Every 5th wave, Vilgax himself attacks** — a giant boss with eye lasers, a ground-slam shockwave, radial bullet bursts, and drone summons. He enrages below half health. Beat him for a huge score bonus, HP, and a full Omnitrix recharge.
 
 ### Controls (desktop)
 

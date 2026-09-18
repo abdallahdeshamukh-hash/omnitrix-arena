@@ -75,6 +75,11 @@ const sfx = {
   transform:()=>{ tone(330,.35,'sawtooth',.06,660); setTimeout(()=>tone(660,.3,'sawtooth',.05,990),120); },
   revert:()=>tone(660,.3,'sine',.05,220),
   wave:  ()=>{ tone(440,.15,'square',.04); setTimeout(()=>tone(660,.2,'square',.04),150); },
+  // boss
+  bossRoar: ()=>{ tone(70,.7,'sawtooth',.10,40); setTimeout(()=>tone(52,.6,'sawtooth',.09,30),180); },
+  bossLaser: ()=>{ tone(240,.14,'sawtooth',.05,120); },
+  bossSlam: ()=>{ tone(55,.4,'sawtooth',.11,25); setTimeout(()=>tone(90,.2,'square',.05,50),80); },
+  bossDefeat: ()=>{ tone(300,.9,'sawtooth',.09,40); setTimeout(()=>tone(160,.8,'square',.07,30),250); setTimeout(()=>tone(660,.5,'sine',.06,1320),500); },
 };
 
 // ---------- Game state ----------
@@ -98,6 +103,7 @@ const player = {
 let bullets = [], ebullets = [], enemies = [], particles = [], pickups = [], floaters = [], shockwaves = [];
 let spawnQueue = [], spawnT = 0;
 let wave = 0, waveTimer = 2.5, betweenWaves = true;
+let boss = null;   // Vilgax (every 5th wave)
 let score = 0, kills = 0, best = 0;
 try{ best = +(localStorage.getItem('omnitrix_best')||0); }catch(e){}
 
@@ -201,8 +207,20 @@ const ENEMY = {
   XENOCITE: { r:10, hp:1,  spd:200, color:'#6f8f1f', color2:'#d9ff6b', dmg:8,  score:8  },
   SENTRY:   { r:15, hp:2,  spd:85,  color:'#5b6b8c', color2:'#9fb3d9', dmg:10, score:15 },
   WARBOT:   { r:28, hp:12, spd:58,  color:'#3d4660', color2:'#8fa0c0', dmg:18, score:30 },
+  // BOSS — spawns via buildWave every 5th wave, drawn by its own branch
+  VILGAX:   { r:64, hp:160, spd:62, color:'#31465a', color2:'#ff5964', dmg:22, score:2500 },
 };
 function spawnEnemy(type){
+  if(type==='VILGAX'){
+    const a = rand(0,TAU);   // materialize in view, ~320px from Ben
+    boss = { type:'VILGAX', x: clamp(player.x + Math.cos(a)*320, 90, world.w-90), y: clamp(player.y + Math.sin(a)*320, 90, world.h-90), vx:0, vy:0, r:64, t:0, hitT:0,
+      maxHp: Math.round(160*DIFF.hp*(1+(wave-5)*0.12)), spd: 62*DIFF.spd,
+      fireCd: 2.2, slamCd: 3.5, burstCd: 5.5, summonCd: 9,
+      slamT: 0, burstT: 0, burstN: 0, enraged: false };
+    boss.hp = boss.maxHp;
+    shake(14,.7);
+    return;
+  }
   const t = ENEMY[type];
   let x=0,y=0,tries=0;
   do{
@@ -224,6 +242,11 @@ function spawnEnemy(type){
 }
 function buildWave(n){
   const q = [];
+  if(n%5===0){                            // ===== BOSS WAVE — Vilgax =====
+    q.push('VILGAX');    const m = Math.max(2, Math.round((2 + n*0.4) * DIFF.count));
+    for(let i=0;i<m;i++) q.push(i%2 ? 'DNALIEN' : 'XENOCITE');
+    return q;
+  }
   if(n===1){ const c1 = Math.max(3, Math.round(5*DIFF.count)); for(let i=0;i<c1;i++) q.push('DNALIEN'); return q; }
   const count = Math.max(2, Math.round((3 + Math.floor(n*1.8)) * DIFF.count));
   const xenos = n>=2 ? Math.max(1, Math.round((2+n) * DIFF.count)) : 0;
@@ -437,6 +460,13 @@ function transformOn(force){
 // Alien X god-mode: screen-clearing arrival + mid-fight ascension
 function godArrival(){
   const p = player;
+  if(boss){   // even Vilgax can't survive the dawn of Alien X
+    const bt = ENEMY.VILGAX;
+    kills++; score += bt.score;
+    burst(boss.x,boss.y,bt.color,30,420); burst(boss.x,boss.y,'#ffffff',20,520);
+    floater(boss.x,boss.y-80,'+'+bt.score,'#ffd23f');
+    boss = null;
+  }
   for(const e of enemies.slice()){
     const t = ENEMY[e.type];
     kills++; score += t.score;
@@ -575,6 +605,7 @@ function transformOff(timedOut){
 function startGame(){
   audioInit();
   state = ST.PLAY;
+  boss = null;
   Object.assign(player, {
     x:world.w/2, y:world.h/2, vx:0, vy:0, hp:100, maxHp:100,
     alien:0, transformed:false, energy:100, maxEnergy:100, rechargeCd:0, iFrames:1,
@@ -590,6 +621,7 @@ function startGame(){
 }
 function gameOver(){
   state = ST.OVER;
+  boss = null;
   selectUI.open = false; transformFX = null;
   if(score > best){ best = score; try{ localStorage.setItem('omnitrix_best', String(best)); }catch(e){} }
   sfx.explode();
@@ -684,7 +716,7 @@ function update(dt){
   if(spawnQueue.length){
     spawnT -= dt;
     if(spawnT<=0){ spawnEnemy(spawnQueue.shift()); spawnT = 0.35 * DIFF.gap; }
-  } else if(!betweenWaves && enemies.length===0){
+  } else if(!betweenWaves && enemies.length===0 && !boss){
     score += 50*wave;
     floater(p.x, p.y-50, 'WAVE '+wave+' CLEAR! +'+(50*wave), '#7dfa4c');
     betweenWaves = true; waveTimer = DIFF.break;
@@ -697,7 +729,8 @@ function update(dt){
       spawnQueue = buildWave(wave);
       spawnT = 0.1;
       betweenWaves = false;
-      say('WAVE '+wave, wave>=4 && wave%2===0 ? 'A Warbot detected!' : 'Here they come!', '#ff9a3d');
+      say('WAVE '+wave, wave>=4 && wave%2===0 ? 'A Warbot detected!' : (wave%5===0 ? 'VILGAX IS HERE!!' : 'Here they come!'), wave%5===0 ? '#ff5964' : '#ff9a3d');
+      if(wave%5===0) sfx.bossRoar();
       sfx.wave();
     }
   }
@@ -750,6 +783,51 @@ function update(dt){
         e.fireCd -= dt;
         if(e.fireCd<=0 && d<620){ e.chargeT = 0.65; e.fireCd = rand(2.2,3.2); }
       }
+    } else if(e.type==='VILGAX'){      // ============ BOSS: VILGAX ============
+      const enrage = e.hp < e.maxHp*0.5;
+      if(enrage && !e.enraged){ e.enraged = true; say('VILGAX IS ENRAGED!', 'He\'s not holding back!', '#ff5964'); sfx.bossRoar(); shake(12,.6); }
+      const er = enrage ? 0.72 : 1;                       // cooldown multiplier
+      e.fireCd -= dt; e.slamCd -= dt; e.burstCd -= dt; e.summonCd -= dt;
+      if(e.slamT > 0){                                    // ground-slam recovery
+        e.slamT -= dt; e.vx = e.vy = 0;
+        if(e.slamT<=0){
+          shockwaves.push({x:e.x,y:e.y,r:20,max:430,spd:560,dmg:0,hit:new Set(),color:'#ff9a3d'});
+          shake(14,.5); sfx.bossSlam();
+        }
+      } else if(e.burstN > 0){                            // radial burst venting
+        e.vx = e.vy = 0;
+        e.burstT -= dt;
+        if(e.burstT<=0){
+          e.burstT = 0.11; e.burstN--;
+          const off = e.burstN%2 ? 0.14 : 0;
+          for(let k=0;k<8;k++){
+            const aa = k*TAU/8 + off + e.t;
+            ebullets.push({x:e.x,y:e.y,vx:Math.cos(aa)*180,vy:Math.sin(aa)*180,r:7,dmg:Math.round(9*DIFF.dmg),life:3.2,c1:'#ff5964',c2:'#ffd6da'});
+          }
+          tone(160,.12,'sawtooth',.05,80);
+        }
+      } else {
+        if(d > 320){ e.vx = nx*e.spd; e.vy = ny*e.spd; }          // close in
+        else if(d < 170){ e.vx = -nx*e.spd*0.6; e.vy = -ny*e.spd*0.6; } // back off
+        else { const slide = Math.sin(e.t*1.6)*0.8; e.vx = (nx*Math.cos(slide)-ny*Math.sin(slide))*e.spd*0.7; e.vy = (nx*Math.sin(slide)+ny*Math.cos(slide))*e.spd*0.7; }
+        if(e.slamCd<=0 && d < 230){                       // leap slam
+          e.slamT = 0.85; e.slamCd = rand(6.5,8.5)*er;
+          tone(110,.5,'sawtooth',.06,50);
+        } else if(e.burstCd<=0){                          // radial burst
+          e.burstN = enrage ? 6 : 4; e.burstT = 0; e.burstCd = rand(7,9)*er;
+        } else if(e.fireCd<=0 && d < 700){                // eye lasers
+          e.fireCd = rand(2.6,3.4)*er;
+          for(const s of [-0.16,0.16]){
+            ebullets.push({x:e.x,y:e.y+10,vx:nx*300,vy:ny*300,r:6,dmg:Math.round(12*DIFF.dmg),life:3,c1:'#ff5964',c2:'#ffd6da'});
+          }
+          sfx.bossLaser();
+        } else if(e.summonCd<=0){                         // call drones
+          e.summonCd = rand(10,13)*er;
+          const n2 = enrage ? 3 : 2;
+          for(let k=0;k<n2;k++) spawnEnemy(Math.random()<0.5?'DNALIEN':'SENTRY');
+          floater(e.x, e.y-e.r-26, 'SUMMONING DRONES', '#ff9a3d');
+        }
+      }
     } else { // WARBOT
       e.vx = nx*e.spd; e.vy = ny*e.spd;
       e.fireCd -= dt;
@@ -766,7 +844,7 @@ function update(dt){
     e.x = clamp(e.x, e.r, world.w-e.r);
     e.y = clamp(e.y, e.r, world.h-e.r);
     // contact damage (Alien X: fully untouchable; Ghostfreak: 70% phase chance)
-    if(d < e.r+p.r && p.iFrames<=0 && p.dashT<=0){
+    if(e.type!=='VILGAX' && d < e.r+p.r && p.iFrames<=0 && p.dashT<=0){
       if(p.transformed && p.alien===6){
         if(Math.random()<0.1) burst(p.x,p.y,'#c9b8ff',3,90);
       } else if(p.transformed && p.alien===4 && Math.random()<0.7){
@@ -876,6 +954,24 @@ function damageEnemy(e, dmg, kx, ky){
   }
   if(e.hp<=0){
     const t = ENEMY[e.type];
+    if(e.type==='VILGAX'){                      // ===== VILGAX DEFEATED =====
+      boss = null;
+      enemies.splice(enemies.indexOf(e),1);
+      kills++; score += t.score;
+      shockwaves.push({x:e.x,y:e.y,r:10,max:1000,spd:900,dmg:0,hit:new Set(),color:'#ffffff'});
+      shockwaves.push({x:e.x,y:e.y,r:10,max:700,spd:600,dmg:0,hit:new Set(),color:'#ff5964'});
+      burst(e.x,e.y,'#ff5964',60,560); burst(e.x,e.y,'#ffffff',40,700); burst(e.x,e.y,'#ff9a3d',30,420);
+      const eb = Math.round(3+wave*5);
+      score += eb; floater(e.x, e.y-80, 'VILGAX DEFEATED! +'+t.score+' +'+eb, '#ffd23f');
+      say('VILGAX DEFEATED!', 'The galaxy is safe… for now.', '#ffd23f');
+      player.energy = player.maxEnergy; player.hp = Math.min(player.maxHp, player.hp+35);
+      pickups.push({x:e.x-40,y:e.y,kind:'hp',t:0,life:15});
+      pickups.push({x:e.x+40,y:e.y,kind:'energy',t:0,life:15});
+      pickups.push({x:e.x,y:e.y+40,kind:'hp',t:0,life:15});
+      shake(18,1); hitFlash = 0.4; transformFX = { t:0, dur:0.9, color:'#ffffff' };
+      sfx.bossDefeat();
+      return;
+    }
     enemies.splice(enemies.indexOf(e),1);
     kills++; score += t.score;
     burst(e.x,e.y,t.color,20,320);
@@ -1277,7 +1373,60 @@ function drawEnemy(e){
   ctx.beginPath(); ctx.ellipse(0,e.r*0.9,e.r*0.9,e.r*0.3,0,0,TAU); ctx.fill();
   const flash = e.hitT>0;
   const bodyC = flash ? '#ffffff' : t.color;
-  if(e.type==='SENTRY'){
+  if(e.type==='VILGAX'){                 // ===== BOSS: giant Vilgax =====
+    const enrage = e.enraged;
+    ctx.translate(0, Math.sin(e.t*2.2)*4);
+    // tentacle beard
+    ctx.strokeStyle = (enrage && Math.floor(e.t*8)%2===0) ? '#ff8080' : '#22384c';
+    ctx.lineWidth = 7; ctx.lineCap = 'round';
+    for(let i=0;i<6;i++){
+      const bx = -35+i*14, sw = Math.sin(e.t*3+i*1.1)*10;
+      ctx.beginPath(); ctx.moveTo(bx, 26);
+      ctx.quadraticCurveTo(bx+sw*0.5, 52, bx+sw, 74); ctx.stroke();
+    }
+    // torso
+    const g = ctx.createRadialGradient(-20,-30,10,0,0,85);
+    g.addColorStop(0, enrage?'#7d2635':'#31465a'); g.addColorStop(1, enrage?'#3f1020':'#18222e');
+    ctx.fillStyle = g; ctx.shadowColor = enrage?'#ff5964':'#31465a'; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.ellipse(0,0,62,78,0,0,TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    // shoulders
+    ctx.fillStyle = enrage?'#5c1a28':'#22303f';
+    ctx.beginPath(); ctx.ellipse(-52,-38,24,20,0.5,0,TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(52,-38,24,20,-0.5,0,TAU); ctx.fill();
+    // arms + fists
+    ctx.strokeStyle = enrage?'#7d2635':'#2b3d50'; ctx.lineWidth = 16;
+    for(const s of [-1,1]){
+      const sw2 = Math.sin(e.t*2.5+s)*6;
+      ctx.beginPath(); ctx.moveTo(s*52,-34); ctx.quadraticCurveTo(s*78,4,s*60,44+sw2); ctx.stroke();
+      ctx.fillStyle = enrage?'#8a3040':'#31465a';
+      ctx.beginPath(); ctx.arc(s*60,52+sw2,15,0,TAU); ctx.fill();
+    }
+    // head + tentacled mouth
+    ctx.fillStyle = enrage?'#8a3040':'#2b3d50';
+    ctx.beginPath(); ctx.ellipse(0,-72,30,26,0,0,TAU); ctx.fill();
+    ctx.strokeStyle = '#d8a77a'; ctx.lineWidth = 3.5;
+    for(let i=0;i<5;i++){
+      const mx = -16+i*8;
+      ctx.beginPath(); ctx.moveTo(mx,-60);
+      ctx.quadraticCurveTo(mx+Math.sin(e.t*4+i)*4,-50,mx+Math.sin(e.t*3+i)*6,-44); ctx.stroke();
+    }
+    // glowing eyes that track you
+    const lx = clamp(player.x-e.x,-1,1), ly = clamp(player.y-e.y,-1,1);
+    for(const s of [-1,1]){
+      ctx.fillStyle = '#ff5964'; ctx.shadowColor = '#ff5964'; ctx.shadowBlur = enrage?16:8;
+      ctx.beginPath(); ctx.arc(s*12,-76,6,0,TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#2b0b10';
+      ctx.beginPath(); ctx.arc(s*12+lx*2.5,-76+ly*2.5,2.4,0,TAU); ctx.fill();
+    }
+    if(flash){ ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(0,0,62,78,0,0,TAU); ctx.fill(); ctx.globalAlpha = 1; }
+    if(e.hp < e.maxHp){
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(-80,88,160,7);
+      ctx.fillStyle = '#ff5964'; ctx.fillRect(-80,88,160*(e.hp/e.maxHp),7);
+    }
+  } else if(e.type==='SENTRY'){
     if(e.chargeT>0){
       ctx.save();
       ctx.globalAlpha = 0.25 + 0.25*Math.sin(e.t*30);
@@ -1372,6 +1521,17 @@ function drawHUD(){
   ctx.fillStyle = diffKey==='easy' ? '#7dfa4c' : diffKey==='medium' ? '#ffd23f' : '#ff6b6b';
   ctx.font='bold 11px Segoe UI';
   ctx.fillText(DIFF.label, 260, 93);
+
+  // Vilgax boss bar
+  if(boss){
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff5964'; ctx.font = 'bold 15px Segoe UI';
+    ctx.shadowColor = '#ff5964'; ctx.shadowBlur = 12;
+    ctx.fillText('VILGAX', W/2, 24);
+    ctx.shadowBlur = 0;
+    const bw = Math.min(420, W-140);
+    bar(W/2-bw/2, 32, bw, 16, boss.hp/boss.maxHp, '#ff5964', '#ffb3b8', '');
+  }
 
   // current alien tag
   const al = p.transformed ? ALIENS[p.alien] : null;
@@ -1575,6 +1735,10 @@ window.__omni = {
   get wave(){ return wave; },
   get score(){ return score; },
   get enemyCount(){ return enemies.length; },
+  get boss(){ return boss; },
+  get cam(){ return cam; },
+  killBoss(){ if(boss) damageEnemy(boss, 1e9, 0, 1); },
+  testBoss(){ enemies.length=0; spawnQueue.length=0; boss=null; wave=4; betweenWaves=true; waveTimer=0; for(let i=0;i<40 && !boss;i++) update(1/60); },
   get selectOpen(){ return selectUI.open; },
   get diff(){ return diffKey; },
   get paused(){ return paused; },
