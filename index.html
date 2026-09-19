@@ -547,8 +547,8 @@ function drawSelect(){
   ctx.fillStyle = '#101828'; ctx.fill();
   ctx.lineWidth = 6; ctx.strokeStyle = cur.color; ctx.shadowColor = cur.color; ctx.shadowBlur = 26; ctx.stroke();
   ctx.shadowBlur = 0;
-  ctx.fillStyle = cur.color;
-  omnitrixSymbol(44, 62);
+  if(selectUI.idx === 2){ drawXLR8Face(0, -4, 46); }
+  else { ctx.fillStyle = cur.color; omnitrixSymbol(44, 62); }
   ctx.restore();
   const n = 6, gap = Math.min(130, W/6);
   for(let i=0;i<n;i++){
@@ -579,7 +579,82 @@ function drawSelect(){
     ctx.fillText('LOW ENERGY — it will time out fast!', cx, cy + 206);
   }
 }
+// ---------- Alien faces (procedural, show-styled) ----------
+// XLR8 — Alien Force look: broad black carapace dipping to a V between the
+// eyes, steel-blue mask, big slanted glow-green eyes, wide scowl, chin plate.
+function drawXLR8Face(x,y,r){
+  ctx.save(); ctx.translate(x,y);
+  // Head silhouette: rounded crown point, widest at the eye line, tapered chin.
+  const head = function(){
+    ctx.beginPath();
+    ctx.moveTo(0,-1.3*r);
+    ctx.bezierCurveTo(0.80*r,-1.15*r, 1.18*r,-0.55*r, 1.08*r,0.02*r);
+    ctx.bezierCurveTo(1.02*r,0.50*r, 0.62*r,1.02*r, 0,1.3*r);
+    ctx.bezierCurveTo(-0.62*r,1.02*r, -1.02*r,0.50*r, -1.08*r,0.02*r);
+    ctx.bezierCurveTo(-1.18*r,-0.55*r, -0.80*r,-1.15*r, 0,-1.3*r);
+    ctx.closePath();
+  };
+  // 1) black base
+  head(); ctx.fillStyle='#101018'; ctx.fill();
+  // everything else stays inside the head
+  ctx.save(); head(); ctx.clip();
+  // 2) steel-blue mask — everything below the carapace edge
+  ctx.fillStyle='#59b7dc';
+  ctx.fillRect(-1.2*r, 0.30*r, 2.4*r, 1.1*r);
+  // 3) carapace underside — sweeps down to the center V (redrawn over the blue)
+  ctx.beginPath();
+  ctx.moveTo(-1.15*r,-0.10*r);
+  ctx.bezierCurveTo(-0.55*r,0.30*r, -0.22*r,0.38*r, 0,0.38*r);
+  ctx.bezierCurveTo(0.22*r,0.38*r, 0.55*r,0.30*r, 1.15*r,-0.10*r);
+  ctx.lineTo(1.15*r,-1.5*r); ctx.lineTo(-1.15*r,-1.5*r);
+  ctx.closePath();
+  ctx.fillStyle='#101018'; ctx.fill();
+  // glossy sheen on the carapace
+  ctx.beginPath(); ctx.ellipse(-0.40*r,-0.72*r, 0.16*r, 0.42*r, 0.30, 0, TAU);
+  ctx.fillStyle='rgba(255,255,255,0.30)'; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-0.16*r,-1.00*r, 0.06*r, 0.16*r, 0.25, 0, TAU);
+  ctx.fillStyle='rgba(255,255,255,0.42)'; ctx.fill();
+  // mask shading — right side
+  ctx.beginPath();
+  ctx.moveTo(0.15*r,0.30*r); ctx.lineTo(1.1*r,0.30*r);
+  ctx.bezierCurveTo(1.02*r,0.55*r, 0.6*r,1.05*r, 0.12*r,1.28*r);
+  ctx.closePath();
+  ctx.fillStyle='rgba(10,18,38,0.25)'; ctx.fill();
+  // 4) nose bridge — thin dark V under the carapace point
+  ctx.beginPath();
+  ctx.moveTo(0,0.30*r); ctx.lineTo(0.055*r,0.54*r); ctx.lineTo(-0.055*r,0.54*r);
+  ctx.closePath(); ctx.fillStyle='#101018'; ctx.fill();
+  // 5) eyes — big slanted glow-green almonds with heavy black rims
+  for(const s of [-1,1]){
+    ctx.save();
+    ctx.translate(s*0.48*r, 0.14*r);
+    ctx.rotate(-s*0.45);
+    ctx.beginPath();
+    ctx.moveTo(-0.40*r,0);
+    ctx.quadraticCurveTo(0,-0.25*r, 0.40*r,0);
+    ctx.quadraticCurveTo(0,0.17*r, -0.40*r,0);
+    ctx.closePath();
+    ctx.strokeStyle='#0c0c12'; ctx.lineWidth=Math.max(2.5,0.18*r); ctx.stroke();
+    ctx.save(); ctx.shadowColor='#54ff3c'; ctx.shadowBlur=0.6*r;
+    ctx.fillStyle='#54ff3c'; ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+  // 6) scowl — wide, gently down-bowed heavy line
+  ctx.beginPath(); ctx.arc(0, 1.02*r, 0.46*r, Math.PI*1.18, Math.PI*1.82);
+  ctx.strokeStyle='#0c0c12'; ctx.lineWidth=Math.max(2,0.10*r); ctx.lineCap='round'; ctx.stroke();
+  // 7) chin plate
+  ctx.beginPath();
+  ctx.moveTo(-0.26*r,0.98*r); ctx.lineTo(0.26*r,0.98*r);
+  ctx.lineTo(0.14*r,1.22*r); ctx.lineTo(-0.14*r,1.22*r);
+  ctx.closePath();
+  ctx.fillStyle='#59b7dc'; ctx.fill();
+  ctx.strokeStyle='#0c0c12'; ctx.lineWidth=Math.max(1.5,0.06*r); ctx.stroke();
+  ctx.restore(); // clip
+  ctx.restore(); // translate
+}
 function drawAlienSilhouette(x,y,i,r){
+  if(i===2){ drawXLR8Face(x,y,r*0.62); return; }
   const al = ALIENS[i];
   ctx.save(); ctx.translate(x,y);
   ctx.fillStyle = al.color; ctx.shadowColor = al.color; ctx.shadowBlur = 18;
